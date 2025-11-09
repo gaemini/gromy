@@ -22,12 +22,14 @@ class FirestoreService {
       final querySnapshot = await _firestore
           .collection('plants')
           .where('userId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
           .get();
 
-      return querySnapshot.docs
+      // 클라이언트 측에서 정렬 (인덱스 불필요)
+      final plants = querySnapshot.docs
           .map((doc) => Plant.fromJson(doc.data()))
           .toList();
+      plants.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return plants;
     } catch (e) {
       print('Error getting plants: $e');
       return [];
@@ -39,10 +41,15 @@ class FirestoreService {
     return _firestore
         .collection('plants')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Plant.fromJson(doc.data())).toList());
+        .map((snapshot) {
+      // 클라이언트 측에서 정렬 (인덱스 불필요)
+      final plants = snapshot.docs
+          .map((doc) => Plant.fromJson(doc.data()))
+          .toList();
+      plants.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return plants;
+    });
   }
 
   // 게시물 추가
@@ -60,13 +67,15 @@ class FirestoreService {
     try {
       final querySnapshot = await _firestore
           .collection('posts')
-          .orderBy('timestamp', descending: true)
           .limit(limit)
           .get();
 
-      return querySnapshot.docs
+      // 클라이언트 측에서 정렬
+      final posts = querySnapshot.docs
           .map((doc) => Post.fromJson(doc.data()))
           .toList();
+      posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return posts;
     } catch (e) {
       print('Error getting posts: $e');
       return [];
@@ -77,11 +86,16 @@ class FirestoreService {
   Stream<List<Post>> getPostsStream({int limit = 20}) {
     return _firestore
         .collection('posts')
-        .orderBy('timestamp', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Post.fromJson(doc.data())).toList());
+        .map((snapshot) {
+      // 클라이언트 측에서 정렬
+      final posts = snapshot.docs
+          .map((doc) => Post.fromJson(doc.data()))
+          .toList();
+      posts.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return posts;
+    });
   }
 
   // 게시물 업데이트 (좋아요 등)
@@ -126,13 +140,15 @@ class FirestoreService {
       final querySnapshot = await _firestore
           .collection('diagnosis_history')
           .where('userId', isEqualTo: userId)
-          .orderBy('timestamp', descending: true)
           .limit(50)
           .get();
 
-      return querySnapshot.docs
+      // 클라이언트 측에서 정렬
+      final history = querySnapshot.docs
           .map((doc) => DiagnosisHistory.fromJson(doc.data()))
           .toList();
+      history.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return history;
     } catch (e) {
       print('❌ Error getting diagnosis history: $e');
       return [];
@@ -144,12 +160,16 @@ class FirestoreService {
     return _firestore
         .collection('diagnosis_history')
         .where('userId', isEqualTo: userId)
-        .orderBy('timestamp', descending: true)
         .limit(50)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => DiagnosisHistory.fromJson(doc.data()))
-            .toList());
+        .map((snapshot) {
+      // 클라이언트 측에서 정렬
+      final history = snapshot.docs
+          .map((doc) => DiagnosisHistory.fromJson(doc.data()))
+          .toList();
+      history.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return history;
+    });
   }
 }
 

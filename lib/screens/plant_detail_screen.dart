@@ -217,7 +217,7 @@ class PlantDetailScreen extends StatelessWidget {
                           icon: const Icon(Icons.note_add),
                           label: const Text('메모 추가'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: const Color(0xFF2D7A4F),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(

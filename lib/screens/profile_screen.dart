@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../controllers/profile_controller.dart';
 import '../controllers/auth_controller.dart';
+import 'edit_profile_screen.dart';
+import 'my_plants_screen.dart';
+import 'diagnosis_history_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -12,11 +16,12 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Profile',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
         ),
         actions: [
@@ -60,9 +65,10 @@ class ProfileScreen extends StatelessWidget {
               // 사용자 이름
               Text(
                 user.displayName,
-                style: const TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
               ),
               
@@ -106,25 +112,25 @@ class ProfileScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Get.snackbar(
-                      'Edit Profile',
-                      'Edit profile feature coming soon!',
-                      snackPosition: SnackPosition.BOTTOM,
+                    Get.to(
+                      () => const EditProfileScreen(),
+                      transition: Transition.rightToLeft,
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: const Color(0xFF2D7A4F),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Edit Profile',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -136,25 +142,47 @@ class ProfileScreen extends StatelessWidget {
               _buildMenuItem(
                 icon: Icons.local_florist,
                 title: 'My Plants',
-                onTap: () {},
+                onTap: () {
+                  Get.to(
+                    () => const MyPlantsScreen(),
+                    transition: Transition.rightToLeft,
+                  );
+                },
               ),
               
               _buildMenuItem(
                 icon: Icons.bookmark_border,
                 title: 'Saved Posts',
-                onTap: () {},
+                onTap: () {
+                  Get.snackbar(
+                    '준비 중',
+                    'Saved Posts 기능 준비중입니다',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                },
               ),
               
               _buildMenuItem(
                 icon: Icons.emoji_events_outlined,
                 title: 'My Challenges',
-                onTap: () {},
+                onTap: () {
+                  Get.snackbar(
+                    '준비 중',
+                    'My Challenges 기능 준비중입니다',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                },
               ),
               
               _buildMenuItem(
                 icon: Icons.history,
                 title: 'Diagnosis History',
-                onTap: () {},
+                onTap: () {
+                  Get.to(
+                    () => const DiagnosisHistoryScreen(),
+                    transition: Transition.rightToLeft,
+                  );
+                },
               ),
               
               const SizedBox(height: 20),
@@ -246,7 +274,7 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: Colors.green,
+              color: const Color(0xFF2D7A4F),
               size: 28,
             ),
             const SizedBox(width: 16),

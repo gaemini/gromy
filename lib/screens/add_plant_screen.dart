@@ -120,7 +120,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         '성공',
         '${newPlant.name}가 추가되었습니다!',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF2D7A4F),
         colorText: Colors.white,
       );
     } catch (e) {
@@ -238,7 +238,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _savePlant,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: const Color(0xFF2D7A4F),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

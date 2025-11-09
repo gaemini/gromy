@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../controllers/home_controller.dart';
 import 'plant_detail_screen.dart';
 import 'add_plant_screen.dart';
@@ -13,11 +14,12 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'My Plants',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
         ),
       ),
@@ -33,6 +35,16 @@ class HomeScreen extends StatelessWidget {
           }).toList(),
         ),
       )),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Get.to(
+            () => const AddPlantScreen(),
+            transition: Transition.downToUp,
+          );
+        },
+        backgroundColor: const Color(0xFF2D7A4F),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 
@@ -97,7 +109,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       child: const Icon(
                         Icons.check_circle,
-                        color: Colors.green,
+                        color: Color(0xFF2D7A4F),
                         size: 24,
                       ),
                     ),
@@ -106,30 +118,21 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           // 식물 이름
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Text(
-              plant.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                plant.name,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
         ],
       ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Get.to(
-            () => const AddPlantScreen(),
-            transition: Transition.downToUp,
-          );
-        },
-        backgroundColor: Colors.green,
-        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

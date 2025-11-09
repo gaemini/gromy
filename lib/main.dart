@@ -9,7 +9,6 @@ import 'screens/home_screen.dart';
 import 'screens/diagnosis_screen.dart';
 import 'screens/community_screen.dart';
 import 'screens/profile_screen.dart';
-init: first commit (Flutter + Firebase setup)
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,16 +33,16 @@ class MyApp extends StatelessWidget {
       title: 'Gromy',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // 주요 색상: 녹색 계열
+        // 주요 색상: 진한 녹색 계열
         primarySwatch: Colors.green,
-        primaryColor: Colors.green,
+        primaryColor: const Color(0xFF2D7A4F), // 진한 녹색
         
         // AppBar 테마
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           backgroundColor: Colors.white,
           elevation: 0,
-          iconTheme: IconThemeData(color: Colors.black),
-          titleTextStyle: TextStyle(
+          iconTheme: const IconThemeData(color: Colors.black),
+          titleTextStyle: GoogleFonts.poppins(
             color: Colors.black,
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -53,6 +52,19 @@ class MyApp extends StatelessWidget {
         // 전체 폰트: Poppins
         textTheme: GoogleFonts.poppinsTextTheme(
           ThemeData.light().textTheme,
+        ),
+        
+        // 추가 텍스트 스타일
+        primaryTextTheme: GoogleFonts.poppinsTextTheme(),
+        
+        // 버튼 텍스트
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            textStyle: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
         
         // Scaffold 배경색
@@ -85,7 +97,7 @@ class MainScreen extends StatelessWidget {
         currentIndex: mainController.selectedIndex.value,
         onTap: mainController.changeTab,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.green,
+        selectedItemColor: const Color(0xFF2D7A4F), // 진한 녹색
         unselectedItemColor: Colors.grey,
         showSelectedLabels: false,
         showUnselectedLabels: false,
@@ -113,7 +125,7 @@ class MainScreen extends StatelessWidget {
                   : Icons.people_outline,
             ),
             label: 'Community',
-          ),
+            ),
           BottomNavigationBarItem(
             icon: Icon(
               mainController.selectedIndex.value == 3 

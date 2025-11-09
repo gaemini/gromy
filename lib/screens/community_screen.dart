@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../controllers/community_controller.dart';
 import '../models/post.dart';
 import 'create_post_screen.dart';
@@ -13,11 +14,12 @@ class CommunityScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Gromy',
-          style: TextStyle(
+          style: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
         ),
         actions: [
@@ -41,11 +43,12 @@ class CommunityScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Trending Challenges',
-                  style: TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -80,7 +83,7 @@ class CommunityScreen extends StatelessWidget {
             transition: Transition.downToUp,
           );
         },
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF2D7A4F),
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -99,10 +102,10 @@ class CommunityScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.green[50],
+          color: const Color(0xFFE8F5E9),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.green[200]!,
+            color: const Color(0xFF2D7A4F).withOpacity(0.3),
             width: 1,
           ),
         ),
@@ -110,13 +113,13 @@ class CommunityScreen extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green[100],
+              decoration: const BoxDecoration(
+                color: Color(0xFFC8E6C9),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.emoji_events,
-                color: Colors.green[700],
+                color: Color(0xFF2D7A4F),
                 size: 28,
               ),
             ),
@@ -234,14 +237,14 @@ class CommunityScreen extends StatelessWidget {
           Wrap(
             spacing: 8,
             children: post.hashtags.map((hashtag) {
-              return Text(
-                hashtag,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.green[700],
-                  fontWeight: FontWeight.w500,
-                ),
-              );
+                  return Text(
+                    hashtag,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: const Color(0xFF2D7A4F),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  );
             }).toList(),
           ),
           

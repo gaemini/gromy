@@ -102,7 +102,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         '성공',
         '게시물이 작성되었습니다!',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF2D7A4F),
         colorText: Colors.white,
       );
     } catch (e) {
