@@ -59,8 +59,8 @@ class HomeController extends GetxController {
   // 식물 삭제 (Firestore에서 삭제)
   Future<void> deletePlant(String plantId) async {
     try {
-      // TODO: Firestore 삭제 메서드 구현
-      plants.removeWhere((p) => p.id == plantId);
+      await _firestoreService.deletePlant(plantId);
+      // Firestore 스트림이 자동으로 UI 업데이트
       print('✅ Plant deleted: $plantId');
     } catch (e) {
       print('❌ Error deleting plant: $e');

@@ -2,9 +2,59 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/plant.dart';
 import '../models/post.dart';
 import '../models/diagnosis_history.dart';
+import '../models/user_model.dart';
+import '../models/comment.dart';
+import '../models/watering_record.dart';
+import '../models/plant_note.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // ==================== 사용자 관련 ====================
+  
+  // 사용자 정보 저장/업데이트
+  Future<void> saveUser(UserModel user) async {
+    try {
+      await _firestore.collection('users').doc(user.uid).set(
+        user.toJson(),
+        SetOptions(merge: true), // 기존 데이터와 병합
+      );
+      print('✅ User saved: ${user.displayName}');
+    } catch (e) {
+      print('❌ Error saving user: $e');
+      rethrow;
+    }
+  }
+
+  // 사용자 정보 가져오기
+  Future<UserModel?> getUser(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return UserModel.fromJson(doc.data()!);
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting user: $e');
+      return null;
+    }
+  }
+
+  // 사용자 실시간 스트림
+  Stream<UserModel?> getUserStream(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((doc) {
+      if (doc.exists && doc.data() != null) {
+        return UserModel.fromJson(doc.data()!);
+      }
+      return null;
+    });
+  }
+
+  // ==================== 식물 관련 ====================
 
   // 식물 추가
   Future<void> addPlant(Plant plant) async {
@@ -14,6 +64,145 @@ class FirestoreService {
       print('Error adding plant: $e');
       rethrow;
     }
+  }
+
+  // 식물 삭제
+  Future<void> deletePlant(String plantId) async {
+    try {
+      await _firestore.collection('plants').doc(plantId).delete();
+      print('✅ Plant deleted from Firestore');
+    } catch (e) {
+      print('❌ Error deleting plant: $e');
+      rethrow;
+    }
+  }
+
+  // 식물 메모 추가 (타임라인)
+  Future<void> addPlantNote(PlantNote note) async {
+    try {
+      await _firestore
+          .collection('plants')
+          .doc(note.plantId)
+          .collection('notes')
+          .doc(note.id)
+          .set(note.toJson());
+      print('✅ Plant note added');
+    } catch (e) {
+      print('❌ Error adding plant note: $e');
+      rethrow;
+    }
+  }
+
+  // 식물 메모 목록 가져오기 (최신순)
+  Future<List<PlantNote>> getPlantNotes(String plantId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('plants')
+          .doc(plantId)
+          .collection('notes')
+          .get();
+
+      final notes = querySnapshot.docs
+          .map((doc) => PlantNote.fromJson(doc.data()))
+          .toList();
+      notes.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // 최신순
+      return notes;
+    } catch (e) {
+      print('❌ Error getting plant notes: $e');
+      return [];
+    }
+  }
+
+  // 식물 메모 실시간 스트림
+  Stream<List<PlantNote>> getPlantNotesStream(String plantId) {
+    return _firestore
+        .collection('plants')
+        .doc(plantId)
+        .collection('notes')
+        .snapshots()
+        .map((snapshot) {
+      final notes = snapshot.docs
+          .map((doc) => PlantNote.fromJson(doc.data()))
+          .toList();
+      notes.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      return notes;
+    });
+  }
+
+  // 메모 삭제
+  Future<void> deletePlantNote(String plantId, String noteId) async {
+    try {
+      await _firestore
+          .collection('plants')
+          .doc(plantId)
+          .collection('notes')
+          .doc(noteId)
+          .delete();
+      print('✅ Plant note deleted');
+    } catch (e) {
+      print('❌ Error deleting plant note: $e');
+      rethrow;
+    }
+  }
+
+  // 물주기 기록 추가
+  Future<void> addWateringRecord(String plantId, WateringRecord record) async {
+    try {
+      final batch = _firestore.batch();
+      
+      // 1. watering_records 서브컬렉션에 추가
+      final recordRef = _firestore
+          .collection('plants')
+          .doc(plantId)
+          .collection('watering_records')
+          .doc(record.id);
+      batch.set(recordRef, record.toJson());
+      
+      // 2. plant의 lastWatered 업데이트
+      final plantRef = _firestore.collection('plants').doc(plantId);
+      batch.update(plantRef, {
+        'lastWatered': record.timestamp.toIso8601String(),
+      });
+      
+      await batch.commit();
+      print('✅ Watering record added');
+    } catch (e) {
+      print('❌ Error adding watering record: $e');
+      rethrow;
+    }
+  }
+
+  // 일주일 물주기 기록 가져오기 (월요일 기준)
+  Future<List<WateringRecord>> getWeeklyWateringRecords(String plantId) async {
+    try {
+      final startOfWeek = _getStartOfWeek(DateTime.now());
+      final endOfWeek = startOfWeek.add(const Duration(days: 7));
+      
+      final querySnapshot = await _firestore
+          .collection('plants')
+          .doc(plantId)
+          .collection('watering_records')
+          .get();
+      
+      final records = querySnapshot.docs
+          .map((doc) => WateringRecord.fromJson(doc.data()))
+          .where((record) =>
+              record.timestamp.isAfter(startOfWeek) &&
+              record.timestamp.isBefore(endOfWeek))
+          .toList();
+      
+      return records;
+    } catch (e) {
+      print('❌ Error getting watering records: $e');
+      return [];
+    }
+  }
+
+  // 월요일 기준 주의 시작일 계산
+  DateTime _getStartOfWeek(DateTime date) {
+    final weekday = date.weekday; // 1=월요일, 7=일요일
+    final monday = date.subtract(Duration(days: weekday - 1));
+    return DateTime(monday.year, monday.month, monday.day);
   }
 
   // 사용자의 식물 목록 조회
@@ -49,6 +238,20 @@ class FirestoreService {
           .toList();
       plants.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return plants;
+    });
+  }
+
+  // 특정 식물 실시간 스트림
+  Stream<Plant?> getPlantStream(String plantId) {
+    return _firestore
+        .collection('plants')
+        .doc(plantId)
+        .snapshots()
+        .map((doc) {
+      if (doc.exists && doc.data() != null) {
+        return Plant.fromJson(doc.data()!);
+      }
+      return null;
     });
   }
 
@@ -108,15 +311,97 @@ class FirestoreService {
     }
   }
 
-  // 좋아요 토글
-  Future<void> toggleLike(String postId, int currentLikes) async {
+  // 게시물 삭제
+  Future<void> deletePost(String postId) async {
     try {
-      await _firestore.collection('posts').doc(postId).update({
-        'likes': currentLikes + 1,
-      });
+      await _firestore.collection('posts').doc(postId).delete();
+      print('✅ Post deleted from Firestore');
     } catch (e) {
-      print('Error toggling like: $e');
+      print('❌ Error deleting post: $e');
       rethrow;
+    }
+  }
+
+  // 좋아요 확인
+  Future<bool> hasUserLikedPost(String postId, String userId) async {
+    try {
+      final doc = await _firestore
+          .collection('posts')
+          .doc(postId)
+          .collection('likes')
+          .doc(userId)
+          .get();
+      return doc.exists;
+    } catch (e) {
+      print('❌ Error checking like: $e');
+      return false;
+    }
+  }
+
+  // 좋아요 추가
+  Future<void> likePost(String postId, String userId) async {
+    try {
+      final batch = _firestore.batch();
+      
+      // 1. likes 서브컬렉션에 추가
+      final likeRef = _firestore
+          .collection('posts')
+          .doc(postId)
+          .collection('likes')
+          .doc(userId);
+      batch.set(likeRef, {
+        'userId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      
+      // 2. 게시물의 likes 카운트 증가
+      final postRef = _firestore.collection('posts').doc(postId);
+      batch.update(postRef, {
+        'likes': FieldValue.increment(1),
+      });
+      
+      await batch.commit();
+      print('✅ Post liked');
+    } catch (e) {
+      print('❌ Error liking post: $e');
+      rethrow;
+    }
+  }
+
+  // 좋아요 취소
+  Future<void> unlikePost(String postId, String userId) async {
+    try {
+      final batch = _firestore.batch();
+      
+      // 1. likes 서브컬렉션에서 삭제
+      final likeRef = _firestore
+          .collection('posts')
+          .doc(postId)
+          .collection('likes')
+          .doc(userId);
+      batch.delete(likeRef);
+      
+      // 2. 게시물의 likes 카운트 감소
+      final postRef = _firestore.collection('posts').doc(postId);
+      batch.update(postRef, {
+        'likes': FieldValue.increment(-1),
+      });
+      
+      await batch.commit();
+      print('✅ Post unliked');
+    } catch (e) {
+      print('❌ Error unliking post: $e');
+      rethrow;
+    }
+  }
+
+  // 좋아요 토글
+  Future<void> toggleLike(String postId, String userId) async {
+    final hasLiked = await hasUserLikedPost(postId, userId);
+    if (hasLiked) {
+      await unlikePost(postId, userId);
+    } else {
+      await likePost(postId, userId);
     }
   }
 
@@ -169,6 +454,98 @@ class FirestoreService {
           .toList();
       history.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       return history;
+    });
+  }
+
+  // ==================== 댓글 관련 ====================
+
+  // 댓글 추가
+  Future<void> addComment(Comment comment) async {
+    try {
+      final batch = _firestore.batch();
+      
+      // 1. comments 서브컬렉션에 추가
+      final commentRef = _firestore
+          .collection('posts')
+          .doc(comment.postId)
+          .collection('comments')
+          .doc(comment.id);
+      batch.set(commentRef, comment.toJson());
+      
+      // 2. 게시물의 comments 카운트 증가
+      final postRef = _firestore.collection('posts').doc(comment.postId);
+      batch.update(postRef, {
+        'comments': FieldValue.increment(1),
+      });
+      
+      await batch.commit();
+      print('✅ Comment added');
+    } catch (e) {
+      print('❌ Error adding comment: $e');
+      rethrow;
+    }
+  }
+
+  // 댓글 삭제
+  Future<void> deleteComment(String postId, String commentId) async {
+    try {
+      final batch = _firestore.batch();
+      
+      // 1. comments 서브컬렉션에서 삭제
+      final commentRef = _firestore
+          .collection('posts')
+          .doc(postId)
+          .collection('comments')
+          .doc(commentId);
+      batch.delete(commentRef);
+      
+      // 2. 게시물의 comments 카운트 감소
+      final postRef = _firestore.collection('posts').doc(postId);
+      batch.update(postRef, {
+        'comments': FieldValue.increment(-1),
+      });
+      
+      await batch.commit();
+      print('✅ Comment deleted');
+    } catch (e) {
+      print('❌ Error deleting comment: $e');
+      rethrow;
+    }
+  }
+
+  // 게시물의 댓글 목록 가져오기
+  Future<List<Comment>> getComments(String postId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('posts')
+          .doc(postId)
+          .collection('comments')
+          .get();
+
+      final comments = querySnapshot.docs
+          .map((doc) => Comment.fromJson(doc.data()))
+          .toList();
+      comments.sort((a, b) => a.timestamp.compareTo(b.timestamp)); // 시간순 정렬
+      return comments;
+    } catch (e) {
+      print('❌ Error getting comments: $e');
+      return [];
+    }
+  }
+
+  // 댓글 실시간 스트림
+  Stream<List<Comment>> getCommentsStream(String postId) {
+    return _firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .snapshots()
+        .map((snapshot) {
+      final comments = snapshot.docs
+          .map((doc) => Comment.fromJson(doc.data()))
+          .toList();
+      comments.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      return comments;
     });
   }
 }

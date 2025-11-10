@@ -47,6 +47,19 @@ dependencies:
   cloud_firestore: ^5.4.4
   firebase_storage: ^12.3.4
   
+  # Google Sign In
+  google_sign_in: ^6.2.1
+  
+  # HTTP
+  http: ^1.1.0
+  
+  # Weather & Location
+  geolocator: ^13.0.2
+  flutter_dotenv: ^5.1.0
+  
+  # Charts
+  fl_chart: ^0.68.0
+  
   # Image Picker
   image_picker: ^1.0.7
 

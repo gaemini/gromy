@@ -1,7 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import '../services/storage_service.dart';
+import '../services/firestore_service.dart';
+import '../controllers/auth_controller.dart';
+import '../models/user_model.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -11,12 +16,33 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _nameController = TextEditingController(text: 'Plant Lover');
-  final _emailController = TextEditingController(text: 'plantlover@gromy.com');
-  final _bioController = TextEditingController(text: '식물을 사랑하는 사람입니다 🌿');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _bioController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  final StorageService _storageService = StorageService();
+  final FirestoreService _firestoreService = FirestoreService();
+  
   File? _selectedImage;
   bool _isSaving = false;
+  String? _currentProfileImageUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    final authController = Get.find<AuthController>();
+    final user = authController.currentUser.value;
+    
+    if (user != null) {
+      _nameController.text = user.displayName;
+      _emailController.text = user.email;
+      _currentProfileImageUrl = user.profileImageUrl;
+    }
+  }
 
   @override
   void dispose() {
@@ -53,21 +79,58 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _isSaving = true;
     });
 
-    // TODO: Firebase에 프로필 업데이트
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final authController = Get.find<AuthController>();
+      final currentUser = authController.currentUser.value;
+      
+      if (currentUser == null) return;
 
-    setState(() {
-      _isSaving = false;
-    });
+      String profileImageUrl = _currentProfileImageUrl ?? '';
 
-    Get.back();
-    Get.snackbar(
-      '성공',
-      '프로필이 업데이트되었습니다',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color(0xFF2D7A4F),
-      colorText: Colors.white,
-    );
+      // 1. 이미지 업로드 (선택한 경우)
+      if (_selectedImage != null) {
+        print('📤 Uploading profile image...');
+        profileImageUrl = await _storageService.uploadImage(
+          _selectedImage!,
+          'profile_images',
+        );
+        print('✅ Profile image uploaded');
+      }
+
+      // 2. 사용자 정보 업데이트
+      final updatedUser = UserModel(
+        uid: currentUser.uid,
+        displayName: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        profileImageUrl: profileImageUrl,
+      );
+
+      await _firestoreService.saveUser(updatedUser);
+
+      // AuthController 새로고침하여 즉시 반영
+      await authController.refreshUserProfile();
+
+      Get.back();
+      Get.snackbar(
+        '성공',
+        '프로필이 업데이트되었습니다',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF2D7A4F),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        '오류',
+        '프로필 업데이트에 실패했습니다',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
   }
 
   @override
@@ -95,7 +158,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.only(
+          left: 20.0,
+          right: 20.0,
+          top: 20.0,
+          bottom: 100.0,
+        ),
         child: Column(
           children: [
             // 프로필 이미지
@@ -105,9 +173,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   CircleAvatar(
                     radius: 60,
                     backgroundImage: _selectedImage != null
-                        ? FileImage(_selectedImage!)
-                        : const NetworkImage('https://i.pravatar.cc/150?img=5')
-                            as ImageProvider,
+                        ? FileImage(_selectedImage!) as ImageProvider
+                        : _currentProfileImageUrl != null
+                            ? NetworkImage(_currentProfileImageUrl!)
+                            : const NetworkImage('https://i.pravatar.cc/150?img=5'),
                     backgroundColor: Colors.grey[300],
                   ),
                   Positioned(

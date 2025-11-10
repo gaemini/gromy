@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/community_controller.dart';
+import '../controllers/auth_controller.dart';
 import '../models/post.dart';
 import 'create_post_screen.dart';
+import 'post_detail_screen.dart';
+import 'search_screen.dart';
+import 'edit_post_screen.dart';
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});
@@ -26,10 +30,9 @@ class CommunityScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              Get.snackbar(
-                'Search',
-                'Search functionality coming soon!',
-                snackPosition: SnackPosition.BOTTOM,
+              Get.to(
+                () => const SearchScreen(),
+                transition: Transition.fadeIn,
               );
             },
           ),
@@ -173,10 +176,9 @@ class CommunityScreen extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Get.snackbar(
-          '게시물 상세',
-          '게시물 상세 화면 준비중입니다',
-          snackPosition: SnackPosition.BOTTOM,
+        Get.to(
+          () => PostDetailScreen(post: post),
+          transition: Transition.rightToLeft,
         );
       },
       child: Padding(
@@ -216,7 +218,7 @@ class CommunityScreen extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.more_horiz),
-                onPressed: () {},
+                onPressed: () => _showPostMenu(post, controller),
               ),
             ],
           ),
@@ -280,13 +282,13 @@ class CommunityScreen extends StatelessWidget {
           Row(
             children: [
               InkWell(
-                onTap: () => controller.likePost(post.id),
+                onTap: () => controller.toggleLike(post.id),
                 child: Row(
                   children: [
                     const Icon(
-                      Icons.favorite_border,
+                      Icons.favorite,
                       size: 24,
-                      color: Colors.grey,
+                      color: Colors.red,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -331,6 +333,124 @@ class CommunityScreen extends StatelessWidget {
         ],
       ),
       ),
+    );
+  }
+
+  void _showPostMenu(Post post, CommunityController controller) {
+    final authController = Get.find<AuthController>();
+    final isMyPost = post.userId == authController.currentUserId;
+
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.only(top: 20, bottom: 40), // 하단 여백 추가
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: isMyPost
+                ? [
+                    _buildMenuTile(
+                      icon: Icons.edit,
+                      title: '수정하기',
+                      onTap: () {
+                        Get.back();
+                        Get.to(
+                          () => EditPostScreen(post: post),
+                          transition: Transition.rightToLeft,
+                        );
+                      },
+                    ),
+                    _buildMenuTile(
+                      icon: Icons.delete,
+                      title: '삭제하기',
+                      color: Colors.red,
+                      onTap: () {
+                        Get.back();
+                        _deletePost(post, controller);
+                      },
+                    ),
+                  ]
+                : [
+                    _buildMenuTile(
+                      icon: Icons.report,
+                      title: '신고하기',
+                      color: Colors.red,
+                      onTap: () {
+                        Get.back();
+                        Get.snackbar('신고', '신고 기능 준비중입니다',
+                            snackPosition: SnackPosition.BOTTOM);
+                      },
+                    ),
+                    _buildMenuTile(
+                      icon: Icons.block,
+                      title: '차단하기',
+                      color: Colors.red,
+                      onTap: () {
+                        Get.back();
+                        Get.snackbar('차단', '차단 기능 준비중입니다',
+                            snackPosition: SnackPosition.BOTTOM);
+                      },
+                    ),
+                  ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: color ?? Colors.black),
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(
+          color: color ?? Colors.black,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  void _deletePost(Post post, CommunityController controller) {
+    Get.defaultDialog(
+      title: '게시물 삭제',
+      middleText: '이 게시물을 삭제하시겠습니까?\n삭제된 게시물은 복구할 수 없습니다.',
+      textConfirm: '삭제',
+      textCancel: '취소',
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.red,
+      onConfirm: () async {
+        try {
+          // Firestore에서 게시물 삭제
+          await controller.deletePost(post.id);
+          Get.back(); // 다이얼로그 닫기
+          Get.snackbar(
+            '삭제 완료',
+            '게시물이 삭제되었습니다',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFF2D7A4F),
+            colorText: Colors.white,
+          );
+        } catch (e) {
+          Get.back();
+          Get.snackbar(
+            '오류',
+            '게시물 삭제에 실패했습니다: $e',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+        }
+      },
     );
   }
 }

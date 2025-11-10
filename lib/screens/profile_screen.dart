@@ -3,9 +3,13 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../controllers/profile_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/main_controller.dart';
 import 'edit_profile_screen.dart';
 import 'my_plants_screen.dart';
 import 'diagnosis_history_screen.dart';
+import 'settings_screen.dart';
+import 'saved_posts_screen.dart';
+import 'my_challenges_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -28,17 +32,16 @@ class ProfileScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              Get.snackbar(
-                'Settings',
-                'Settings coming soon!',
-                snackPosition: SnackPosition.BOTTOM,
+              Get.to(
+                () => const SettingsScreen(),
+                transition: Transition.rightToLeft,
               );
             },
           ),
         ],
       ),
       body: Obx(() {
-        final user = controller.currentUser.value;
+        final user = controller.currentUser;
         
         if (user == null) {
           return const Center(
@@ -47,7 +50,12 @@ class ProfileScreen extends StatelessWidget {
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.only(
+            left: 20.0,
+            right: 20.0,
+            top: 20.0,
+            bottom: 100.0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -154,10 +162,9 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.bookmark_border,
                 title: 'Saved Posts',
                 onTap: () {
-                  Get.snackbar(
-                    '준비 중',
-                    'Saved Posts 기능 준비중입니다',
-                    snackPosition: SnackPosition.BOTTOM,
+                  Get.to(
+                    () => const SavedPostsScreen(),
+                    transition: Transition.rightToLeft,
                   );
                 },
               ),
@@ -166,10 +173,9 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.emoji_events_outlined,
                 title: 'My Challenges',
                 onTap: () {
-                  Get.snackbar(
-                    '준비 중',
-                    'My Challenges 기능 준비중입니다',
-                    snackPosition: SnackPosition.BOTTOM,
+                  Get.to(
+                    () => const MyChallengesScreen(),
+                    transition: Transition.rightToLeft,
                   );
                 },
               ),

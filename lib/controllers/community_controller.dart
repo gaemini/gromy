@@ -113,35 +113,53 @@ class CommunityController extends GetxController {
     }
   }
 
-  // 좋아요 토글 (Firestore 연동)
-  Future<void> likePost(String postId) async {
+  // 좋아요 상태 확인
+  Future<bool> hasLiked(String postId) async {
     try {
-      final index = posts.indexWhere((post) => post.id == postId);
-      if (index != -1) {
-        final post = posts[index];
-        final newLikes = post.likes + 1;
-        
-        // 로컬에서 즉시 업데이트 (낙관적 업데이트)
-        posts[index] = Post(
-          id: post.id,
-          userName: post.userName,
-          userId: post.userId,
-          userProfileImage: post.userProfileImage,
-          postImage: post.postImage,
-          content: post.content,
-          hashtags: post.hashtags,
-          likes: newLikes,
-          comments: post.comments,
-          timestamp: post.timestamp,
-        );
-        
-        // Firestore에 업데이트
-        await _firestoreService.toggleLike(postId, newLikes);
-        print('✅ Post liked: $postId');
-      }
+      final authController = Get.find<AuthController>();
+      final userId = authController.currentUserId;
+      if (userId == null) return false;
+      
+      return await _firestoreService.hasUserLikedPost(postId, userId);
     } catch (e) {
-      print('❌ Error liking post: $e');
-      // 에러 발생 시 롤백은 Firestore 스트림이 자동으로 처리
+      print('❌ Error checking like status: $e');
+      return false;
+    }
+  }
+
+  // 좋아요 토글 (중복 방지)
+  Future<void> toggleLike(String postId) async {
+    try {
+      final authController = Get.find<AuthController>();
+      final userId = authController.currentUserId;
+      
+      if (userId == null) {
+        Get.snackbar(
+          '알림',
+          '로그인이 필요합니다',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      // Firestore에 좋아요 토글 (중복 자동 처리)
+      await _firestoreService.toggleLike(postId, userId);
+      print('✅ Like toggled for post: $postId');
+      
+      // Firestore 스트림이 자동으로 UI 업데이트
+    } catch (e) {
+      print('❌ Error toggling like: $e');
+    }
+  }
+
+  // 게시물 삭제
+  Future<void> deletePost(String postId) async {
+    try {
+      await _firestoreService.deletePost(postId);
+      print('✅ Post deleted');
+    } catch (e) {
+      print('❌ Error deleting post: $e');
+      rethrow;
     }
   }
 }

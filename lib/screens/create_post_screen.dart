@@ -79,14 +79,24 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     try {
       final authController = Get.find<AuthController>();
       final communityController = Get.find<CommunityController>();
+      final user = authController.currentUser.value;
+      
+      if (user == null) {
+        Get.snackbar(
+          '알림',
+          '로그인이 필요합니다',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
       
       final hashtags = _extractHashtags(_contentController.text);
       
       final newPost = Post(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        userName: 'Plant Lover', // TODO: 실제 사용자 이름
-        userId: authController.currentUserId ?? 'anonymous',
-        userProfileImage: 'https://i.pravatar.cc/150?img=5',
+        userName: user.displayName, // 실제 Google 계정 이름
+        userId: user.uid,
+        userProfileImage: user.profileImageUrl, // 실제 프로필 이미지
         postImage: '', // Storage 업로드 후 URL 설정
         content: _contentController.text.trim(),
         hashtags: hashtags,
@@ -145,7 +155,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.only(
+          left: 16.0,
+          right: 16.0,
+          top: 16.0,
+          bottom: 100.0,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

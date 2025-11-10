@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../services/storage_service.dart';
 import '../models/plant.dart';
 
 class AddPlantScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  final StorageService _storageService = StorageService();
   File? _selectedImage;
   bool _isLoading = false;
 
@@ -46,14 +48,15 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
   void _showImageSourceDialog() {
     Get.bottomSheet(
       Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 40),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             ListTile(
               leading: const Icon(Icons.photo_library, color: Colors.green),
               title: const Text('갤러리에서 선택'),
@@ -71,6 +74,7 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
               },
             ),
           ],
+        ),
         ),
       ),
     );
@@ -98,10 +102,15 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
       final authController = Get.find<AuthController>();
       final homeController = Get.find<HomeController>();
 
-      // TODO: Firebase Storage에 이미지 업로드 (추후 구현)
-      // 현재는 임시로 더미 URL 사용
-      final imageUrl = 'https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=400';
+      // 1. Firebase Storage에 이미지 업로드
+      print('📤 Uploading plant image...');
+      final imageUrl = await _storageService.uploadImage(
+        _selectedImage!,
+        'plants',
+      );
+      print('✅ Image uploaded: $imageUrl');
 
+      // 2. Plant 객체 생성
       final newPlant = Plant(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
@@ -111,9 +120,9 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         userId: authController.currentUserId ?? 'anonymous',
       );
 
-      // TODO: Firestore에 저장 (추후 구현)
-      // 현재는 로컬 리스트에만 추가
-      homeController.addPlant(newPlant);
+      // 3. Firestore에 저장
+      await homeController.addPlant(newPlant);
+      print('✅ Plant saved to Firestore');
 
       Get.back();
       Get.snackbar(
@@ -145,7 +154,12 @@ class _AddPlantScreenState extends State<AddPlantScreen> {
         title: const Text('식물 추가'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.only(
+          left: 20.0,
+          right: 20.0,
+          top: 20.0,
+          bottom: 100.0,
+        ),
         child: Form(
           key: _formKey,
           child: Column(

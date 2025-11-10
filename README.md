@@ -97,10 +97,6 @@ flutter run
 
 - ✅ Android
 - ✅ iOS
-- ✅ Web
-- ✅ Windows
-- ✅ macOS
-- ✅ Linux
 
 ## 📝 개발 상태
 
@@ -110,10 +106,15 @@ flutter run
 - [x] 4개 주요 화면
 - [x] GetX 상태 관리
 - [x] Firebase 서비스 레이어
-- [ ] Firebase 연동 활성화
-- [ ] AI 진단 기능
-- [ ] 실시간 알림
-- [ ] 다국어 지원
+- [x] Firebase 연동 (Authentication, Firestore, Storage)
+- [x] 식물 관리 CRUD
+- [x] 게시물 작성/목록/좋아요
+- [x] 진단 히스토리 저장
+- [x] 프로필 관리
+- [ ] AI 진단 API 연동
+- [ ] 댓글 기능
+- [ ] 실시간 푸시 알림
+- [ ] 챌린지 상세 기능
 
 ## 🤝 기여
 

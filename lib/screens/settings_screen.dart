@@ -29,7 +29,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.only(
+          left: 16.0,
+          right: 16.0,
+          top: 16.0,
+          bottom: 100.0, // 하단 여백 추가
+        ),
         children: [
           // 알림 섹션
           _buildSectionTitle('알림 설정'),
