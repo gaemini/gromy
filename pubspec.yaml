@@ -62,13 +62,19 @@ dependencies:
   fl_chart: ^0.68.0
   
   # Image Picker
-  image_picker: ^1.0.7
+  image_picker: ^1.0.4
   
   # Speed Dial FAB
   flutter_speed_dial: ^7.0.0
   
+  # Photo View
+  photo_view: ^0.15.0
+  
   # URL Launcher
   url_launcher: ^6.2.3
+  
+  # Date & Time Formatting
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:

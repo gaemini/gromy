@@ -14,8 +14,11 @@ import '../services/firestore_service.dart';
 import '../services/weather_service.dart';
 import '../widgets/watering_chart.dart';
 import '../widgets/sunlight_chart.dart';
+import '../widgets/plant_notes_section.dart';
 import 'create_plant_note_screen.dart';
 import 'edit_plant_screen.dart';
+import 'all_activities_screen.dart';
+import 'image_viewer_screen.dart';
 
 class PlantDetailScreen extends StatefulWidget {
   final Plant plant;
@@ -138,68 +141,82 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 100.0),
+        padding: const EdgeInsets.only(bottom: 120.0), // 하단바와 FAB를 고려한 여백
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 식물 이미지 슬라이더
-            SizedBox(
-              height: 300,
-              child: Stack(
-                children: [
-                  PageView.builder(
-                    itemCount: plant.imageUrls.length,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentImageIndex = index;
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      return Hero(
-                        tag: index == 0 ? 'plant_${plant.id}' : 'plant_${plant.id}_$index',
-                        child: Image.network(
-                          plant.imageUrls[index],
-                          height: 300,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 300,
-                              color: Colors.grey[300],
-                              child: const Icon(
-                                Icons.local_florist,
-                                size: 100,
-                                color: Colors.grey,
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
+            GestureDetector(
+              onTap: () {
+                // 이미지 전체 화면 보기
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ImageViewerScreen(
+                      imageUrls: plant.imageUrls,
+                      initialIndex: _currentImageIndex,
+                    ),
                   ),
-                  
-                  // 이미지 개수 표시
-                  if (plant.imageUrls.length > 1)
-                    Positioned(
-                      bottom: 20,
-                      right: 20,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${_currentImageIndex + 1}/${plant.imageUrls.length}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                );
+              },
+              child: SizedBox(
+                height: 300,
+                child: Stack(
+                  children: [
+                    PageView.builder(
+                      itemCount: plant.imageUrls.length,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentImageIndex = index;
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        return Hero(
+                          tag: 'plant_image_$index',
+                          child: Image.network(
+                            plant.imageUrls[index],
+                            height: 300,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 300,
+                                color: Colors.grey[300],
+                                child: const Icon(
+                                  Icons.local_florist,
+                                  size: 100,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    // 이미지 개수 표시
+                    if (plant.imageUrls.length > 1)
+                      Positioned(
+                        bottom: 20,
+                        right: 20,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${_currentImageIndex + 1}/${plant.imageUrls.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
             
@@ -218,7 +235,18 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // 섹션 3: 최근 활동 타임라인
+                  // 섹션 3: 메모 섹션
+                  PlantNotesSection(
+                    plantId: plant.id,
+                    notes: _notes,
+                    onRefresh: () {
+                      _loadNotes();
+                    },
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // 섹션 4: 최근 활동 타임라인
                   _buildRecentActivities(),
                   
                   const SizedBox(height: 24),
@@ -548,11 +576,7 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
               child: Center(
                 child: TextButton.icon(
                   onPressed: () {
-                    Get.snackbar(
-                      '준비 중',
-                      '전체 기록 보기 기능이 곧 추가됩니다',
-                      snackPosition: SnackPosition.BOTTOM,
-                    );
+                    Get.to(() => AllActivitiesScreen(plant: _currentPlant ?? widget.plant));
                   },
                   icon: const Icon(Icons.arrow_forward),
                   label: Text(
@@ -1003,21 +1027,6 @@ class _PlantDetailScreenState extends State<PlantDetailScreen> {
       elevation: 8.0,
       shape: const CircleBorder(),
       children: [
-        SpeedDialChild(
-          child: const Icon(Icons.note_add, color: Colors.white),
-          backgroundColor: const Color(0xFF2D7A4F),
-          foregroundColor: Colors.white,
-          label: '메모 추가',
-          labelStyle: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-          labelBackgroundColor: const Color(0xFF2D7A4F),
-          onTap: () {
-            Get.to(() => CreatePlantNoteScreen(plant: widget.plant));
-          },
-        ),
         SpeedDialChild(
           child: const Icon(Icons.content_cut, color: Colors.white),
           backgroundColor: Colors.brown,

@@ -312,7 +312,7 @@ class MyChallengesScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${(progress * 100).toInt()}%',
+                      '${(progress.isNaN || progress.isInfinite ? 0 : progress * 100).toInt()}%',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -466,7 +466,7 @@ class MyChallengesScreen extends StatelessWidget {
                     children: [
                       _buildStatItem(
                         '진행률',
-                        '${(status['progress'] * 100).toInt()}%',
+                        '${((status['progress'] ?? 0.0) * 100).toInt()}%',
                         Icons.trending_up,
                       ),
                       _buildStatItem(

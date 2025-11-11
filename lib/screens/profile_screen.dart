@@ -91,7 +91,30 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               
-              const SizedBox(height: 30),
+              const SizedBox(height: 12),
+              
+              // 한줄 소개
+              if (user.bio != null && user.bio!.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    user.bio!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey[800],
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ] else
+                const SizedBox(height: 20),
               
               // 통계 섹션
               Row(

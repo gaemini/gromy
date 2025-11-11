@@ -3,12 +3,14 @@ class UserModel {
   final String displayName;
   final String email;
   final String profileImageUrl;
+  final String? bio;
 
   UserModel({
     required this.uid,
     required this.displayName,
     required this.email,
     required this.profileImageUrl,
+    this.bio,
   });
 
   // JSON으로 변환
@@ -18,6 +20,7 @@ class UserModel {
       'displayName': displayName,
       'email': email,
       'profileImageUrl': profileImageUrl,
+      'bio': bio,
     };
   }
 
@@ -28,6 +31,7 @@ class UserModel {
       displayName: json['displayName'] ?? '',
       email: json['email'] ?? '',
       profileImageUrl: json['profileImageUrl'] ?? '',
+      bio: json['bio'],
     );
   }
 }

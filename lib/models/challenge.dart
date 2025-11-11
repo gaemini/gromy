@@ -32,12 +32,16 @@ class Challenge {
 
   // JSON에서 객체 생성
   factory Challenge.fromJson(Map<String, dynamic> json) {
+    // 안전한 기본값 설정 (0 방지)
+    final targetDays = json['targetDays'] ?? 30;
+    final requiredWatering = json['requiredWatering'] ?? 30;
+    
     return Challenge(
       id: json['id'] ?? '',
       title: json['title'] ?? '',
       description: json['description'] ?? '',
-      targetDays: json['targetDays'] ?? 30,
-      requiredWatering: json['requiredWatering'] ?? 30,
+      targetDays: targetDays > 0 ? targetDays : 30,
+      requiredWatering: requiredWatering > 0 ? requiredWatering : 30,
       icon: json['icon'] ?? 'emoji_events',
       difficulty: json['difficulty'] ?? 'medium',
     );

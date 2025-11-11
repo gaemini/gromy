@@ -19,9 +19,14 @@ class ChallengeParticipation {
 
   // 진행률 계산 (0.0 ~ 1.0)
   double getProgress(int requiredWatering) {
-    if (requiredWatering <= 0) return 0.0;
+    // 0으로 나누기 방지
+    if (requiredWatering <= 0) {
+      print('⚠️ Warning: requiredWatering is $requiredWatering, returning 0.0');
+      return 0.0;
+    }
     final completed = completedDays.length;
-    return (completed / requiredWatering).clamp(0.0, 1.0);
+    final progress = completed / requiredWatering;
+    return progress.clamp(0.0, 1.0);
   }
 
   // 남은 일수 계산

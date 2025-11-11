@@ -40,6 +40,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (user != null) {
       _nameController.text = user.displayName;
       _emailController.text = user.email;
+      _bioController.text = user.bio ?? '';
       _currentProfileImageUrl = user.profileImageUrl;
     }
   }
@@ -103,6 +104,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         displayName: _nameController.text.trim(),
         email: _emailController.text.trim(),
         profileImageUrl: profileImageUrl,
+        bio: _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
       );
 
       await _firestoreService.saveUser(updatedUser);

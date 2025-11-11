@@ -212,10 +212,14 @@ class ChallengeController extends GetxController {
       };
     }
     
+    // 안전한 값 계산 (0으로 나누기 방지)
+    final safeRequiredWatering = challenge.requiredWatering > 0 ? challenge.requiredWatering : 1;
+    final safeTargetDays = challenge.targetDays > 0 ? challenge.targetDays : 1;
+    
     return {
       'isActive': true,
-      'progress': participation.getProgress(challenge.requiredWatering),
-      'daysRemaining': participation.getDaysRemaining(challenge.targetDays),
+      'progress': participation.getProgress(safeRequiredWatering),
+      'daysRemaining': participation.getDaysRemaining(safeTargetDays),
       'streakDays': participation.getStreakDays(),
       'completedDays': participation.completedDays.length,
     };

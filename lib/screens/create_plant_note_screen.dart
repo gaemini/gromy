@@ -9,9 +9,11 @@ import '../services/firestore_service.dart';
 import '../services/storage_service.dart';
 
 class CreatePlantNoteScreen extends StatefulWidget {
-  final Plant plant;
+  final Plant? plant;
+  final String? plantId;
 
-  const CreatePlantNoteScreen({super.key, required this.plant});
+  const CreatePlantNoteScreen({super.key, this.plant, this.plantId})
+      : assert(plant != null || plantId != null, 'Either plant or plantId must be provided');
 
   @override
   State<CreatePlantNoteScreen> createState() => _CreatePlantNoteScreenState();
@@ -121,18 +123,21 @@ class _CreatePlantNoteScreenState extends State<CreatePlantNoteScreen> {
     try {
       String? imageUrl;
 
+      // plantId 결정
+      final String plantIdToUse = widget.plant?.id ?? widget.plantId!;
+
       // 이미지가 있으면 Storage에 업로드
       if (_selectedImage != null) {
         imageUrl = await _storageService.uploadPlantNoteImage(
           _selectedImage!,
-          widget.plant.id,
+          plantIdToUse,
         );
       }
 
       // PlantNote 생성
       final note = PlantNote(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        plantId: widget.plant.id,
+        plantId: plantIdToUse,
         content: _contentController.text.trim(),
         timestamp: DateTime.now(),
         imageUrl: imageUrl,
@@ -214,20 +219,27 @@ class _CreatePlantNoteScreenState extends State<CreatePlantNoteScreen> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      widget.plant.imageUrl,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
+                    child: widget.plant?.imageUrl != null 
+                      ? Image.network(
+                          widget.plant!.imageUrl,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 50,
+                              height: 50,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.local_florist, size: 30),
+                            );
+                          },
+                        )
+                      : Container(
                           width: 50,
                           height: 50,
                           color: Colors.grey[300],
                           child: const Icon(Icons.local_florist, size: 30),
-                        );
-                      },
-                    ),
+                        ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -235,7 +247,7 @@ class _CreatePlantNoteScreenState extends State<CreatePlantNoteScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.plant.name,
+                          widget.plant?.name ?? '식물',
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,

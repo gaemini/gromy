@@ -5,8 +5,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../controllers/community_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/notification_controller.dart';
+import '../controllers/challenge_controller.dart';
 import '../models/post.dart';
 import '../models/advertisement.dart';
+import '../models/challenge.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'create_post_screen.dart';
@@ -14,6 +16,7 @@ import 'post_detail_screen.dart';
 import 'search_screen.dart';
 import 'edit_post_screen.dart';
 import 'notifications_screen.dart';
+import 'my_challenges_screen.dart';
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});
@@ -22,14 +25,16 @@ class CommunityScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final CommunityController controller = Get.put(CommunityController());
     final NotificationController notificationController = Get.put(NotificationController());
+    final ChallengeController challengeController = Get.put(ChallengeController());
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'Gromy',
-          style: AppTextStyles.headlineMedium.copyWith(
+          style: GoogleFonts.poppins(
+            fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppColors.primaryGreen,
+            color: Colors.black,
           ),
         ),
         backgroundColor: AppColors.white,
@@ -145,15 +150,17 @@ class CommunityScreen extends StatelessWidget {
             ),
             itemBuilder: (context, index) {
               // 3개 게시물마다 광고 삽입
-              if ((index + 1) % 4 == 0) {
+              if ((index + 1) % 4 == 0 && controller.advertisements.isNotEmpty) {
                 // 광고 위치 (4번째, 8번째, 12번째...)
                 final adIndex = ((index + 1) ~/ 4 - 1) % controller.advertisements.length;
                 return _buildAdvertisementItem(controller.advertisements[adIndex]);
               } else {
                 // 실제 게시물 인덱스 계산
-                final postIndex = index - (index ~/ 4);
-                if (postIndex < controller.posts.length) {
-                  return _buildPostItem(controller.posts[postIndex], controller);
+                final adjustedIndex = controller.advertisements.isNotEmpty 
+                    ? index - (index ~/ 4)
+                    : index;
+                if (adjustedIndex < controller.posts.length) {
+                  return _buildPostItem(controller.posts[adjustedIndex], controller);
                 }
                 return const SizedBox.shrink();
               }
@@ -177,47 +184,60 @@ class CommunityScreen extends StatelessWidget {
   // 전체 아이템 수 계산 (게시물 + 광고)
   int _calculateTotalItems(int postCount) {
     if (postCount == 0) return 0;
+    // 광고가 있을 때만 광고 슬롯 추가
+    final controller = Get.find<CommunityController>();
+    if (controller.advertisements.isEmpty) {
+      return postCount;
+    }
     // 3개마다 광고 1개 추가
     return postCount + (postCount ~/ 3);
   }
 
   // 챌린지 카드
   Widget _buildChallengeCard(int index) {
-    final challenges = [
-      {
-        'title': '30일 물주기',
-        'participants': '14.2k',
-        'icon': Icons.water_drop_rounded,
-        'color': AppColors.primaryBlue,
-      },
-      {
-        'title': '첫 꽃 피우기',
-        'participants': '8.5k',
-        'icon': Icons.local_florist_rounded,
-        'color': Colors.pink,
-      },
-      {
-        'title': '그린 썸',
-        'participants': '5.3k',
-        'icon': Icons.eco_rounded,
-        'color': AppColors.primaryGreen,
-      },
-    ];
+    final challengeController = Get.find<ChallengeController>();
     
-    final challenge = challenges[index];
+    // 실제 챌린지 데이터 사용
+    final allChallenges = Challenge.defaultChallenges;
+    if (index >= allChallenges.length) return const SizedBox.shrink();
+    
+    final challenge = allChallenges[index];
+    
+    // 아이콘과 색상 매핑
+    final iconData = {
+      'water_drop': Icons.water_drop_rounded,
+      'local_florist': Icons.local_florist_rounded,
+      'eco': Icons.eco_rounded,
+    }[challenge.icon] ?? Icons.emoji_events_rounded;
+    
+    final iconColor = {
+      'water_drop': AppColors.primaryBlue,
+      'local_florist': Colors.pink,
+      'eco': AppColors.primaryGreen,
+    }[challenge.icon] ?? AppColors.primaryGreen;
+    
+    // 참여자 수 가져오기
+    final participantCount = challengeController.participantsCounts[challenge.id] ?? 0;
+    final formattedCount = participantCount >= 1000 
+        ? '${(participantCount / 1000).toStringAsFixed(1)}k' 
+        : participantCount.toString();
     
     return Container(
       width: 120,
       margin: const EdgeInsets.only(right: 12),
       child: InkWell(
         onTap: () {
-          Get.snackbar(
-            '챌린지',
-            '${challenge['title']} 챌린지',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: AppColors.primaryGreen,
-            colorText: AppColors.white,
-          );
+          // 챌린지 참여 여부 확인
+          if (challengeController.isParticipating(challenge.id)) {
+            // 이미 참여 중이면 My Challenges 화면으로 이동
+            Get.to(
+              () => const MyChallengesScreen(),
+              transition: Transition.rightToLeft,
+            );
+          } else {
+            // 참여하지 않은 경우 참여 다이얼로그 표시
+            _showChallengeJoinDialog(challenge);
+          }
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
@@ -240,14 +260,16 @@ class CommunityScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  challenge['icon'] as IconData,
-                  color: challenge['color'] as Color,
+                  iconData,
+                  color: iconColor,
                   size: 26,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                challenge['title'] as String,
+                challenge.title.length > 10 
+                    ? '${challenge.title.substring(0, 10)}...' 
+                    : challenge.title,
                 style: AppTextStyles.labelMedium.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -256,12 +278,18 @@ class CommunityScreen extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
-              Text(
-                '${challenge['participants']} 참여',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.gray600,
-                ),
-              ),
+              Obx(() {
+                final currentCount = challengeController.participantsCounts[challenge.id] ?? 0;
+                final formatted = currentCount >= 1000 
+                    ? '${(currentCount / 1000).toStringAsFixed(1)}k' 
+                    : currentCount.toString();
+                return Text(
+                  '$formatted 참여',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.gray600,
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -352,12 +380,19 @@ class CommunityScreen extends StatelessWidget {
             onTap: () async {
               final Uri url = Uri.parse(ad.targetUrl);
               try {
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                } else {
-                  throw '링크를 열 수 없습니다';
+                final bool launched = await launchUrl(
+                  url, 
+                  mode: LaunchMode.externalApplication,
+                );
+                if (!launched) {
+                  // 첫 시도 실패 시 기본 모드로 재시도
+                  await launchUrl(
+                    url,
+                    mode: LaunchMode.platformDefault,
+                  );
                 }
               } catch (e) {
+                print('Error launching URL: $e');
                 Get.snackbar(
                   '오류',
                   '링크를 열 수 없습니다: $e',
@@ -413,12 +448,19 @@ class CommunityScreen extends StatelessWidget {
                     onPressed: () async {
                       final Uri url = Uri.parse(ad.targetUrl);
                       try {
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        } else {
-                          throw '링크를 열 수 없습니다';
+                        final bool launched = await launchUrl(
+                          url, 
+                          mode: LaunchMode.externalApplication,
+                        );
+                        if (!launched) {
+                          // 첫 시도 실패 시 기본 모드로 재시도
+                          await launchUrl(
+                            url,
+                            mode: LaunchMode.platformDefault,
+                          );
                         }
                       } catch (e) {
+                        print('Error launching URL: $e');
                         Get.snackbar(
                           '오류',
                           '링크를 열 수 없습니다: $e',
@@ -845,6 +887,161 @@ class CommunityScreen extends StatelessWidget {
         margin: const EdgeInsets.only(top: 100),
       ),
     );
+  }
+
+  // 챌린지 참여 다이얼로그
+  void _showChallengeJoinDialog(Challenge challenge) {
+    final challengeController = Get.find<ChallengeController>();
+    
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Column(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: AppColors.lightGreen,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Icon(
+                _getChallengeIcon(challenge.icon),
+                color: _getChallengeColor(challenge.icon),
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              challenge.title,
+              style: AppTextStyles.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              challenge.description,
+              style: AppTextStyles.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.gray50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  _buildChallengeInfo(
+                    '목표 기간',
+                    '${challenge.targetDays}일',
+                    Icons.calendar_today_outlined,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildChallengeInfo(
+                    '목표 횟수',
+                    '${challenge.requiredWatering}회',
+                    Icons.water_drop_outlined,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildChallengeInfo(
+                    '난이도',
+                    _getDifficultyText(challenge.difficulty),
+                    Icons.signal_cellular_alt,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              '취소',
+              style: AppTextStyles.button.copyWith(
+                color: AppColors.gray600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Get.back();
+              await challengeController.joinChallenge(challenge.id);
+              // 참여 후 My Challenges 화면으로 이동
+              Get.to(
+                () => const MyChallengesScreen(),
+                transition: Transition.rightToLeft,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              '참여하기',
+              style: AppTextStyles.button.copyWith(
+                color: AppColors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChallengeInfo(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppColors.gray600),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.gray600,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: AppTextStyles.bodyMedium.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _getChallengeIcon(String icon) {
+    return {
+      'water_drop': Icons.water_drop_rounded,
+      'local_florist': Icons.local_florist_rounded,
+      'eco': Icons.eco_rounded,
+    }[icon] ?? Icons.emoji_events_rounded;
+  }
+
+  Color _getChallengeColor(String icon) {
+    return {
+      'water_drop': AppColors.primaryBlue,
+      'local_florist': Colors.pink,
+      'eco': AppColors.primaryGreen,
+    }[icon] ?? AppColors.primaryGreen;
+  }
+
+  String _getDifficultyText(String difficulty) {
+    return {
+      'easy': '쉬움',
+      'medium': '보통',
+      'hard': '어려움',
+    }[difficulty] ?? '보통';
   }
 }
 

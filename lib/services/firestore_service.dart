@@ -164,8 +164,50 @@ class FirestoreService {
     });
   }
 
-  // 메모 삭제
-  Future<void> deletePlantNote(String plantId, String noteId) async {
+  // 메모 업데이트
+  Future<void> updatePlantNote(PlantNote note) async {
+    try {
+      await _firestore
+          .collection('plants')
+          .doc(note.plantId)
+          .collection('notes')
+          .doc(note.id)
+          .update(note.toJson());
+      print('✅ Plant note updated');
+    } catch (e) {
+      print('❌ Error updating plant note: $e');
+      rethrow;
+    }
+  }
+
+  // 메모 삭제 (noteId만으로 삭제)
+  Future<void> deletePlantNote(String noteId) async {
+    try {
+      // 모든 plants 컬렉션에서 해당 note를 찾아 삭제
+      final plantsSnapshot = await _firestore.collection('plants').get();
+      
+      for (var plantDoc in plantsSnapshot.docs) {
+        final noteDoc = await plantDoc.reference
+            .collection('notes')
+            .doc(noteId)
+            .get();
+        
+        if (noteDoc.exists) {
+          await noteDoc.reference.delete();
+          print('✅ Plant note deleted from plant ${plantDoc.id}');
+          return;
+        }
+      }
+      
+      print('⚠️ Plant note not found');
+    } catch (e) {
+      print('❌ Error deleting plant note: $e');
+      rethrow;
+    }
+  }
+
+  // 메모 삭제 (plantId와 noteId 사용)
+  Future<void> deletePlantNoteWithPlantId(String plantId, String noteId) async {
     try {
       await _firestore
           .collection('plants')
@@ -255,6 +297,50 @@ class FirestoreService {
     } catch (e) {
       print('❌ Error adding plant history: $e');
       rethrow;
+    }
+  }
+
+  // 모든 물주기 기록 가져오기 (30일)
+  Future<List<WateringRecord>> getAllWateringRecords(String plantId) async {
+    try {
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+      
+      final querySnapshot = await _firestore
+          .collection('plants')
+          .doc(plantId)
+          .collection('watering_records')
+          .where('timestamp', isGreaterThan: thirtyDaysAgo.toIso8601String())
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => WateringRecord.fromJson(doc.data()))
+          .toList();
+    } catch (e) {
+      print('❌ Error getting all watering records: $e');
+      return [];
+    }
+  }
+
+  // 식물 활동 기록 가져오기
+  Future<List<PlantHistory>> getPlantHistories(String plantId) async {
+    try {
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+      
+      final querySnapshot = await _firestore
+          .collection('plants')
+          .doc(plantId)
+          .collection('histories')
+          .where('timestamp', isGreaterThan: thirtyDaysAgo.toIso8601String())
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => PlantHistory.fromJson(doc.data()))
+          .toList();
+    } catch (e) {
+      print('❌ Error getting plant histories: $e');
+      return [];
     }
   }
 

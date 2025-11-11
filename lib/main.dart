@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'controllers/main_controller.dart';
 import 'controllers/auth_controller.dart';
+import 'controllers/diagnosis_controller.dart';
 import 'screens/home_screen.dart';
 import 'screens/diagnosis_screen.dart';
 import 'screens/community_screen.dart';
@@ -15,6 +17,9 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 한국어 날짜 형식 초기화
+  await initializeDateFormatting('ko_KR', null);
   
   // Firebase 초기화
   await Firebase.initializeApp(
@@ -49,6 +54,17 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           home: const AuthWrapper(),
+          getPages: [
+            GetPage(
+              name: '/diagnosis',
+              page: () => const DiagnosisScreen(),
+              binding: BindingsBuilder(() {
+                if (!Get.isRegistered<DiagnosisController>()) {
+                  Get.lazyPut(() => DiagnosisController());
+                }
+              }),
+            ),
+          ],
         );
       },
     );
@@ -91,6 +107,9 @@ class MainScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // MainController 초기화
     final MainController mainController = Get.put(MainController());
+    if (!Get.isRegistered<DiagnosisController>()) {
+      Get.lazyPut(() => DiagnosisController());
+    }
     
     // 각 탭에 해당하는 화면 목록
     final List<Widget> screens = [

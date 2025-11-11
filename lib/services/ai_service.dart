@@ -1,180 +1,133 @@
-import 'dart:io';
-import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
 
 class AiService {
-  // AI API 엔드포인트 설정
-  // 개발: 로컬 서버 또는 테스트 서버
-  // 프로덕션: 실제 배포된 AI 서버
-  static const String _baseUrl = 'https://your-ai-api-server.com/api/v1';
-  // 로컬 테스트용: 'http://localhost:8000/api/v1'
-  // 또는: 'http://10.0.2.2:8000/api/v1' (Android 에뮬레이터용)
-  
-  static const Duration _timeout = Duration(seconds: 30);
+  AiService({
+    http.Client? httpClient,
+    String? baseUrl,
+  })  : _httpClient = httpClient ?? http.Client(),
+        _baseUrl = baseUrl ?? _defaultBaseUrl;
 
-  // AI 진단 API 호출
-  Future<DiagnosisResult?> diagnosePlant(String imageUrl) async {
-    try {
-      print('🤖 Calling AI diagnosis API...');
-      
-      final response = await http
-          .post(
-            Uri.parse('$_baseUrl/diagnose'),
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: json.encode({
-              'imageUrl': imageUrl,
-            }),
-          )
-          .timeout(_timeout);
+  static const String _defaultBaseUrl = 'https://YOUR-AI-SERVER-URL.run.app';
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        print('✅ AI diagnosis successful');
-        return DiagnosisResult.fromJson(jsonData);
-      } else {
-        print('❌ AI diagnosis failed: ${response.statusCode}');
-        print('Response body: ${response.body}');
-        return null;
-      }
-    } catch (e) {
-      print('❌ AI Service Error: $e');
-      return null;
-    }
-  }
+  final http.Client _httpClient;
+  final String _baseUrl;
 
-  // 이미지 파일로 직접 진단 (Multipart)
-  Future<DiagnosisResult?> diagnosePlantWithFile(File imageFile) async {
-    try {
-      print('🤖 Calling AI diagnosis API with file...');
-      
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$_baseUrl/diagnose'),
-      );
-
-      // 이미지 파일 추가
-      request.files.add(
+  /// AI 서버의 /diagnose 엔드포인트에 이미지를 업로드하고 결과를 반환합니다.
+  /// - [imageFile] : 진단할 이미지 파일.
+  /// - 타임아웃 : 60초.
+  Future<DiagnosisResult> diagnose(File imageFile) async {
+    final uri = Uri.parse('$_baseUrl/diagnose');
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(
         await http.MultipartFile.fromPath(
           'image',
           imageFile.path,
+          filename: imageFile.uri.pathSegments.isNotEmpty
+              ? imageFile.uri.pathSegments.last
+              : 'diagnosis.jpg',
         ),
       );
 
-      // 요청 전송
-      final streamedResponse = await request.send().timeout(_timeout);
+    try {
+      final streamedResponse = await _httpClient
+          .send(request)
+          .timeout(const Duration(seconds: 60));
+
       final response = await http.Response.fromStream(streamedResponse);
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        print('✅ AI diagnosis successful');
-        return DiagnosisResult.fromJson(jsonData);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final Map<String, dynamic> json = jsonDecode(response.body);
+        return DiagnosisResult.fromJson(json);
       } else {
-        print('❌ AI diagnosis failed: ${response.statusCode}');
-        print('Response body: ${response.body}');
-        return null;
+        throw AiServiceException(
+          'AI 서버 오류 (${response.statusCode})',
+          responseBody: response.body,
+        );
       }
+    } on TimeoutException catch (e) {
+      throw AiServiceException('AI 서버 응답 시간 초과', cause: e);
+    } on SocketException catch (e) {
+      throw AiServiceException('네트워크 연결을 확인하세요.', cause: e);
+    } on FormatException catch (e) {
+      throw AiServiceException('AI 서버 응답 파싱 실패', cause: e);
     } catch (e) {
-      print('❌ AI Service Error: $e');
-      return null;
+      throw AiServiceException('알 수 없는 오류가 발생했습니다.', cause: e);
     }
-  }
-
-  // 서버 상태 확인
-  Future<bool> checkHealth() async {
-    try {
-      final response = await http
-          .get(Uri.parse('$_baseUrl/health'))
-          .timeout(const Duration(seconds: 5));
-      
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        print('✅ AI Server healthy: ${data['status']}');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('❌ AI Server health check failed: $e');
-      return false;
-    }
-  }
-
-  // 더미 진단 결과 생성 (AI 서버가 없을 때 테스트용)
-  Future<DiagnosisResult> getDummyDiagnosis() async {
-    await Future.delayed(const Duration(seconds: 2));
-    
-    final dummyResults = [
-      DiagnosisResult(
-        disease: 'Nutrient Deficiency',
-        confidence: 0.85,
-        recommendations: [
-          'Add liquid fertilizer weekly',
-          'Increase sunlight exposure',
-        ],
-        severity: 'Medium',
-      ),
-      DiagnosisResult(
-        disease: 'Leaf Spot Disease',
-        confidence: 0.78,
-        recommendations: [
-          'Remove affected leaves',
-          'Apply fungicide spray',
-          'Reduce watering frequency',
-        ],
-        severity: 'High',
-      ),
-      DiagnosisResult(
-        disease: 'Healthy Plant',
-        confidence: 0.92,
-        recommendations: [
-          'Continue current care routine',
-          'Monitor for changes',
-        ],
-        severity: 'None',
-      ),
-    ];
-
-    // 랜덤으로 하나 선택
-    return dummyResults[DateTime.now().millisecond % dummyResults.length];
   }
 }
 
-// 진단 결과 모델
 class DiagnosisResult {
-  final String disease;
-  final double confidence;
-  final List<String> recommendations;
-  final String severity;
-
   DiagnosisResult({
+    required this.plantName,
+    required this.plantNameKo,
     required this.disease,
+    required this.diseaseKo,
+    required this.isHealthy,
     required this.confidence,
     required this.recommendations,
-    required this.severity,
   });
 
-  // JSON에서 객체 생성
+  final String plantName;
+  final String plantNameKo;
+  final String disease;
+  final String diseaseKo;
+  final bool isHealthy;
+  final double confidence;
+  final List<String> recommendations;
+
   factory DiagnosisResult.fromJson(Map<String, dynamic> json) {
     return DiagnosisResult(
-      disease: json['disease'] ?? 'Unknown',
-      confidence: (json['confidence'] ?? 0.0).toDouble(),
-      recommendations: List<String>.from(json['recommendations'] ?? []),
-      severity: json['severity'] ?? 'Unknown',
+      plantName: json['plantName'] as String? ?? '',
+      plantNameKo: json['plantNameKo'] as String? ?? '',
+      disease: json['disease'] as String? ?? '',
+      diseaseKo: json['diseaseKo'] as String? ?? '',
+      isHealthy: json['isHealthy'] as bool? ?? false,
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      recommendations: (json['recommendations'] as List<dynamic>?)
+              ?.map((item) => item.toString())
+              .toList() ??
+          <String>[],
     );
   }
 
-  // JSON으로 변환
   Map<String, dynamic> toJson() {
     return {
+      'plantName': plantName,
+      'plantNameKo': plantNameKo,
       'disease': disease,
+      'diseaseKo': diseaseKo,
+      'isHealthy': isHealthy,
       'confidence': confidence,
       'recommendations': recommendations,
-      'severity': severity,
     };
   }
+}
 
-  // 신뢰도를 퍼센트로 표시
-  String get confidencePercent => '${(confidence * 100).toStringAsFixed(0)}%';
+class AiServiceException implements Exception {
+  AiServiceException(
+    this.message, {
+    this.cause,
+    this.responseBody,
+  });
+
+  final String message;
+  final Object? cause;
+  final String? responseBody;
+
+  @override
+  String toString() {
+    final buffer = StringBuffer('AiServiceException: $message');
+    if (responseBody != null && responseBody!.isNotEmpty) {
+      buffer.write('\nResponse: $responseBody');
+    }
+    if (cause != null) {
+      buffer.write('\nCause: $cause');
+    }
+    return buffer.toString();
+  }
 }
 

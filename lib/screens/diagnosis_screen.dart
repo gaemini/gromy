@@ -1,17 +1,24 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../controllers/diagnosis_controller.dart';
 
-class DiagnosisScreen extends StatelessWidget {
+class DiagnosisScreen extends GetView<DiagnosisController> {
   const DiagnosisScreen({super.key});
+
+  Color get _primaryGreen => const Color(0xFF2D7A4F);
 
   @override
   Widget build(BuildContext context) {
-    final DiagnosisController controller = Get.put(DiagnosisController());
-
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
         title: Text(
           'Diagnosis',
           style: GoogleFonts.poppins(
@@ -20,315 +27,310 @@ class DiagnosisScreen extends StatelessWidget {
             color: Colors.black,
           ),
         ),
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(
-          left: 20.0,
-          right: 20.0,
-          top: 20.0,
-          bottom: 100.0,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 20),
-            
-            // 스캔 영역
-            Container(
-              height: 350,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // 식물 이미지 (더미 이미지)
-                  Obx(() => controller.selectedImage.value != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Image.file(
-                            controller.selectedImage.value!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                          ),
-                        )
-                      : Image.network(
-                          'https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=400',
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Center(
-                              child: Icon(
-                                Icons.local_florist,
-                                size: 80,
-                                color: Colors.white30,
-                              ),
-                            );
-                          },
-                        ),
-                  ),
-                  
-                  // 스캔 가이드라인
-                  Container(
-                    margin: const EdgeInsets.all(40),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.6),
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  
-                  // SCANNING 라인과 텍스트
-                  Obx(() => controller.isScanning.value
-                      ? Positioned.fill(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // 녹색 수평선
-                              Container(
-                                height: 2,
-                                width: double.infinity,
-                                margin: const EdgeInsets.symmetric(horizontal: 60),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.transparent,
-                                      const Color(0xFF00FF00),
-                                      Colors.transparent,
-                                    ],
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF00FF00).withOpacity(0.5),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              // SCANNING 텍스트
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.7),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  'SCANNING...',
-                                  style: GoogleFonts.poppins(
-                                    color: const Color(0xFF00FF00),
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 3,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : const SizedBox.shrink()),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 30),
-            
-            // 진단 결과 (동적)
-            Obx(() {
-              if (controller.diagnosisResult.value.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              
-              return Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF9E6),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF3CD),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.warning_amber_rounded,
-                            color: Color(0xFFFFA500),
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            controller.diagnosisResult.value,
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.check_circle,
-                          color: Color(0xFF00C853),
-                          size: 32,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              );
-            }),
-            
-            // 추천 액션 버튼들 (동적)
-            Obx(() {
-              if (controller.recommendations.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              
-              return Column(
-                children: controller.recommendations.map((recommendation) {
-                  final index = controller.recommendations.indexOf(recommendation);
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: index < controller.recommendations.length - 1 ? 12 : 0),
-                    child: _buildActionButton(
-                      icon: _getIconForRecommendation(recommendation),
-                      text: recommendation,
-                      onTap: () {
-                        Get.snackbar(
-                          '액션',
-                          recommendation,
-                          snackPosition: SnackPosition.BOTTOM,
-                        );
-                      },
-                    ),
-                  );
-                }).toList(),
-              );
-            }),
-            
-            const SizedBox(height: 30),
-            
-            // 이미지 선택 버튼들
-            Row(
-              children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: controller.pickImageFromGallery,
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('Gallery'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE8F5E9),
-                        foregroundColor: const Color(0xFF2D7A4F),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: controller.pickImageFromCamera,
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Camera'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE8F5E9),
-                        foregroundColor: const Color(0xFF2D7A4F),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildPreviewCard(),
+              const SizedBox(height: 32),
+              Obx(() => controller.isLoading.value
+                  ? _buildLoadingState()
+                  : controller.currentResult.value != null
+                      ? _buildResultSection(controller.currentResult.value!)
+                      : _buildStartSection()),
+              const SizedBox(height: 32),
+              _buildActionButtons(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  IconData _getIconForRecommendation(String recommendation) {
-    if (recommendation.toLowerCase().contains('water') || 
-        recommendation.toLowerCase().contains('fertilizer')) {
-      return Icons.water_drop;
-    } else if (recommendation.toLowerCase().contains('sun') || 
-               recommendation.toLowerCase().contains('light')) {
-      return Icons.wb_sunny;
-    } else if (recommendation.toLowerCase().contains('temperature') || 
-               recommendation.toLowerCase().contains('warm')) {
-      return Icons.thermostat;
-    } else {
-      return Icons.check_circle;
-    }
+  Widget _buildPreviewCard() {
+    return Obx(() {
+      final File? imageFile = controller.selectedImage.value;
+
+      return AspectRatio(
+        aspectRatio: 1.2,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.grey.shade200,
+            image: imageFile != null
+                ? DecorationImage(
+                    image: FileImage(imageFile),
+                    fit: BoxFit.cover,
+                  )
+                : const DecorationImage(
+                    image: NetworkImage(
+                      'https://images.unsplash.com/photo-1457530378978-8bac673b8062?auto=format&fit=crop&w=900&q=80',
+                    ),
+                    fit: BoxFit.cover,
+                  ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.8),
+                width: 3,
+              ),
+            ),
+          ),
+        ),
+      );
+    });
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String text,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF00FF00), // 밝은 라임 그린
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF00FF00).withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+  Widget _buildLoadingState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(_primaryGreen),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Scanning...',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: Colors.black,
-                size: 24,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'AI가 식물 상태를 분석하고 있어요.',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.black54,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                text,
-                style: GoogleFonts.poppins(
-                  color: Colors.black,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStartSection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            '식물 상태를 확인해볼까요?',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '갤러리에서 사진을 고르거나 카메라로 촬영해 진단을 시작하세요.',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.black54,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultSection(DiagnosisResult result) {
+    final confidencePercent = (result.confidence * 100).clamp(0, 100).toStringAsFixed(1);
+    final isHealthy = result.isHealthy;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: _primaryGreen.withOpacity(0.1),
+                child: Icon(
+                  isHealthy ? Icons.eco : Icons.sick_outlined,
+                  color: _primaryGreen,
+                  size: 28,
                 ),
               ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      result.plantNameKo.isNotEmpty
+                          ? result.plantNameKo
+                          : result.plantName,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      result.diseaseKo.isNotEmpty
+                          ? result.diseaseKo
+                          : result.disease,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: isHealthy ? _primaryGreen : Colors.redAccent,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _primaryGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$confidencePercent%',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _primaryGreen,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Text(
+            '권장 조치',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          if (result.recommendations.isEmpty)
+            Text(
+              '추가 조치가 필요하지 않습니다.',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.black54,
+              ),
+            )
+          else
+            Column(
+              children: result.recommendations
+                  .map(
+                    (item) => Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        '• $item',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: _primaryGreen,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => controller.pickAndDiagnose(source: ImageSource.gallery),
+            icon: const Icon(Icons.photo_library_outlined),
+            label: Text(
+              'Gallery',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE8F5E9),
+              foregroundColor: _primaryGreen,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => controller.pickAndDiagnose(source: ImageSource.camera),
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: Text(
+              'Camera',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE8F5E9),
+              foregroundColor: _primaryGreen,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
-

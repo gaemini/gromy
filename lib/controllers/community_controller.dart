@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/post.dart';
 import '../models/advertisement.dart';
 import '../services/firestore_service.dart';
@@ -19,14 +20,15 @@ class CommunityController extends GetxController {
   // 좋아요 상태 추적 (postId -> bool)
   final RxMap<String, bool> likedPosts = <String, bool>{}.obs;
   
-  // 광고 목록
-  final List<Advertisement> advertisements = Advertisement.defaultAds;
+  // 광고 목록 - Observable로 변경!
+  final RxList<Advertisement> advertisements = <Advertisement>[].obs;
 
   @override
   void onInit() {
     super.onInit();
     loadPosts();
     loadLikedPosts();
+    loadAdvertisements(); // Firebase에서 광고 로드
   }
   
   // 현재 사용자가 좋아요한 게시물 로드
@@ -241,6 +243,50 @@ class CommunityController extends GetxController {
   // 사용자가 특정 게시물에 좋아요를 눌렀는지 확인
   bool isPostLiked(String postId) {
     return likedPosts[postId] ?? false;
+  }
+
+  // Firebase에서 광고 로드 (새로 추가)
+  Future<void> loadAdvertisements() async {
+    try {
+      print('🔄 Loading advertisements from Firebase...');
+      
+      // 인덱스 없이 작동하도록 쿼리 단순화
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('advertisements')
+          .get();
+      
+      if (querySnapshot.docs.isNotEmpty) {
+        // 클라이언트 측에서 필터링 및 정렬
+        final allAds = querySnapshot.docs
+            .map((doc) {
+              final data = doc.data();
+              return Advertisement.fromJson({
+                ...data,
+                'id': doc.id,
+              });
+            })
+            .where((ad) => ad.isActive) // isActive가 true인 것만 필터
+            .toList();
+        
+        // priority로 정렬
+        allAds.sort((a, b) => a.priority.compareTo(b.priority));
+        
+        advertisements.value = allAds;
+        
+        for (final ad in allAds) {
+          print('📢 Ad loaded: ${ad.title} (priority: ${ad.priority})');
+        }
+        
+        print('✅ Loaded ${advertisements.length} active advertisements from Firebase');
+      } else {
+        print('⚠️ No advertisements in Firebase, using defaults');
+        advertisements.value = Advertisement.defaultAds;
+      }
+    } catch (e) {
+      print('❌ Error loading advertisements: $e');
+      // 오류 발생 시 기본 광고 사용
+      advertisements.value = Advertisement.defaultAds;
+    }
   }
 }
 
