@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:get/get.dart';
 import '../models/post.dart';
+import '../models/advertisement.dart';
 import '../services/firestore_service.dart';
 import '../services/storage_service.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/notification_controller.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CommunityController extends GetxController {
   final FirestoreService _firestoreService = FirestoreService();
@@ -12,11 +15,33 @@ class CommunityController extends GetxController {
   // 게시물 목록
   final RxList<Post> posts = <Post>[].obs;
   final RxBool isLoading = false.obs;
+  
+  // 좋아요 상태 추적 (postId -> bool)
+  final RxMap<String, bool> likedPosts = <String, bool>{}.obs;
+  
+  // 광고 목록
+  final List<Advertisement> advertisements = Advertisement.defaultAds;
 
   @override
   void onInit() {
     super.onInit();
     loadPosts();
+    loadLikedPosts();
+  }
+  
+  // 현재 사용자가 좋아요한 게시물 로드
+  Future<void> loadLikedPosts() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    try {
+      for (final post in posts) {
+        final hasLiked = await _firestoreService.hasUserLikedPost(post.id, currentUser.uid);
+        likedPosts[post.id] = hasLiked;
+      }
+    } catch (e) {
+      print('❌ Error loading liked posts: $e');
+    }
   }
 
   // Firestore에서 게시물 로드
@@ -28,6 +53,7 @@ class CommunityController extends GetxController {
       _firestoreService.getPostsStream().listen((postList) {
         posts.value = postList;
         print('✅ ${postList.length} posts loaded from Firestore');
+        loadLikedPosts(); // 게시물 로드 후 좋아요 상태 확인
       });
     } catch (e) {
       print('❌ Error loading posts: $e');
@@ -142,13 +168,62 @@ class CommunityController extends GetxController {
         return;
       }
 
-      // Firestore에 좋아요 토글 (중복 자동 처리)
+      // 현재 좋아요 상태 확인
+      final currentlyLiked = likedPosts[postId] ?? false;
+      
+      // UI 먼저 업데이트 (즉각적인 반응)
+      likedPosts[postId] = !currentlyLiked;
+      
+      // 좋아요 수 즉시 업데이트
+      final postIndex = posts.indexWhere((p) => p.id == postId);
+      if (postIndex != -1) {
+        final updatedPost = Post(
+          id: posts[postIndex].id,
+          userName: posts[postIndex].userName,
+          userId: posts[postIndex].userId,
+          userProfileImage: posts[postIndex].userProfileImage,
+          postImage: posts[postIndex].postImage,
+          content: posts[postIndex].content,
+          hashtags: posts[postIndex].hashtags,
+          likes: currentlyLiked ? posts[postIndex].likes - 1 : posts[postIndex].likes + 1,
+          comments: posts[postIndex].comments,
+          timestamp: posts[postIndex].timestamp,
+        );
+        posts[postIndex] = updatedPost;
+      }
+
+      // Firestore에 좋아요 토글 (백그라운드)
       await _firestoreService.toggleLike(postId, userId);
       print('✅ Like toggled for post: $postId');
       
-      // Firestore 스트림이 자동으로 UI 업데이트
+      // 좋아요 알림 생성 (자신의 게시물이 아닌 경우만)
+      if (!currentlyLiked && posts[postIndex].userId != userId) {
+        final notificationController = Get.find<NotificationController>();
+        final currentUser = await _firestoreService.getUser(userId);
+        
+        if (currentUser != null) {
+          await notificationController.createNotification(
+            userId: posts[postIndex].userId,
+            type: 'like',
+            title: '좋아요',
+            message: '${currentUser.displayName}님이 회원님의 게시물을 좋아합니다.',
+            actionUserId: userId,
+            actionUserName: currentUser.displayName,
+            actionUserImage: currentUser.profileImageUrl,
+            targetId: postId,
+          );
+        }
+      }
+      
     } catch (e) {
       print('❌ Error toggling like: $e');
+      // 에러 발생 시 원래 상태로 복구
+      likedPosts[postId] = !(likedPosts[postId] ?? false);
+      Get.snackbar(
+        '오류',
+        '좋아요 처리 중 오류가 발생했습니다',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -161,6 +236,11 @@ class CommunityController extends GetxController {
       print('❌ Error deleting post: $e');
       rethrow;
     }
+  }
+  
+  // 사용자가 특정 게시물에 좋아요를 눌렀는지 확인
+  bool isPostLiked(String postId) {
+    return likedPosts[postId] ?? false;
   }
 }
 

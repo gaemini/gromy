@@ -49,5 +49,41 @@ class StorageService {
       rethrow;
     }
   }
+
+  // 식물 이미지 업로드
+  Future<String> uploadPlantImage(File image) async {
+    try {
+      final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final Reference ref = _storage.ref().child('plants/$fileName');
+
+      final UploadTask uploadTask = ref.putFile(image);
+      final TaskSnapshot snapshot = await uploadTask;
+
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+      print('✅ Plant image uploaded: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      print('❌ Error uploading plant image: $e');
+      rethrow;
+    }
+  }
+
+  // 식물 메모 이미지 업로드
+  Future<String> uploadPlantNoteImage(File image, String plantId) async {
+    try {
+      final String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final Reference ref = _storage.ref().child('plant_notes/$plantId/$fileName');
+
+      final UploadTask uploadTask = ref.putFile(image);
+      final TaskSnapshot snapshot = await uploadTask;
+
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+      print('✅ Plant note image uploaded: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      print('❌ Error uploading plant note image: $e');
+      rethrow;
+    }
+  }
 }
 

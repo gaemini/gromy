@@ -2,6 +2,7 @@ class Plant {
   final String id;
   final String name;
   final String imageUrl;
+  final List<String> imageUrls; // 여러 이미지 지원
   final bool isHealthy;
   final DateTime createdAt;
   final String userId;
@@ -13,13 +14,14 @@ class Plant {
     required this.id,
     required this.name,
     required this.imageUrl,
+    List<String>? imageUrls,
     required this.isHealthy,
     required this.createdAt,
     required this.userId,
     this.lastWatered,
     this.wateringIntervalDays = 7, // 기본 7일
     this.note,
-  });
+  }) : imageUrls = imageUrls ?? [imageUrl]; // imageUrls가 없으면 imageUrl을 사용
 
   // 다음 물주기 날짜 계산
   DateTime? get nextWateringDate {
@@ -47,6 +49,7 @@ class Plant {
       'id': id,
       'name': name,
       'imageUrl': imageUrl,
+      'imageUrls': imageUrls,
       'isHealthy': isHealthy,
       'createdAt': createdAt.toIso8601String(),
       'userId': userId,
@@ -58,11 +61,22 @@ class Plant {
 
   // JSON에서 객체 생성
   factory Plant.fromJson(Map<String, dynamic> json) {
+    final imageUrl = json['imageUrl'] ?? '';
+    // imageUrls를 명시적으로 List<String>으로 변환
+    final List<String> imageUrls;
+    if (json['imageUrls'] != null) {
+      // dynamic 리스트를 String 리스트로 안전하게 변환
+      imageUrls = (json['imageUrls'] as List).map((e) => e.toString()).toList();
+    } else {
+      imageUrls = [imageUrl];
+    }
+    
     return Plant(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
-      imageUrl: json['imageUrl'] ?? '',
-      isHealthy: json['isHealthy'] ?? false,
+      imageUrl: imageUrl,
+      imageUrls: imageUrls,
+      isHealthy: json['isHealthy'] ?? true,
       createdAt: json['createdAt'] != null 
           ? DateTime.parse(json['createdAt']) 
           : DateTime.now(),
@@ -75,4 +89,3 @@ class Plant {
     );
   }
 }
-

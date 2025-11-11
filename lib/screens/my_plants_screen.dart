@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/home_controller.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 import 'plant_detail_screen.dart';
 
 class MyPlantsScreen extends StatelessWidget {
@@ -12,7 +14,9 @@ class MyPlantsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Plants'),
+        title: Text('나의 식물', style: AppTextStyles.appBarTitle),
+        backgroundColor: AppColors.white,
+        elevation: 0,
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -25,48 +29,43 @@ class MyPlantsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.local_florist,
+                  Icons.local_florist_outlined,
                   size: 80,
-                  color: Colors.grey[400],
+                  color: AppColors.gray300,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   '등록된 식물이 없습니다',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey[600],
-                  ),
+                  style: AppTextStyles.emptyStateTitle,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Home 탭에서 식물을 추가해보세요!',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[500],
-                  ),
+                  style: AppTextStyles.emptyStateSubtitle,
                 ),
               ],
             ),
           );
         }
 
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: GridView.count(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 0.85,
-            children: controller.plants.map((plant) {
-              return _buildPlantCard(plant);
-            }).toList(),
+        return GridView.builder(
+          padding: const EdgeInsets.all(2),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3, // 3열 그리드
+            crossAxisSpacing: 2,
+            mainAxisSpacing: 2,
+            childAspectRatio: 1, // 정사각형
           ),
+          itemCount: controller.plants.length,
+          itemBuilder: (context, index) {
+            return _buildPlantGridItem(controller.plants[index]);
+          },
         );
       }),
     );
   }
 
-  Widget _buildPlantCard(plant) {
+  Widget _buildPlantGridItem(plant) {
     return GestureDetector(
       onTap: () {
         Get.to(
@@ -74,76 +73,87 @@ class MyPlantsScreen extends StatelessWidget {
           transition: Transition.cupertino,
         );
       },
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.gray100,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: Image.network(
-                      plant.imageUrl,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.local_florist,
-                            size: 50,
-                            color: Colors.grey,
-                          ),
-                        );
-                      },
-                    ),
+            // 식물 이미지
+            Image.network(
+              plant.imageUrls?.isNotEmpty == true 
+                  ? plant.imageUrls![0] 
+                  : plant.imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: AppColors.gray200,
+                  child: Icon(
+                    Icons.local_florist_outlined,
+                    size: 40,
+                    color: AppColors.gray400,
                   ),
-                  if (plant.isHealthy)
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+                );
+              },
             ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                plant.name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+            
+            // 그라데이션 오버레이 (하단에 식물 이름 표시용)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.7),
+                      Colors.black.withValues(alpha: 0.3),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                padding: const EdgeInsets.all(8),
+                child: Text(
+                  plant.name,
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.white,
+                    shadows: [
+                      Shadow(
+                        offset: const Offset(0, 1),
+                        blurRadius: 3,
+                        color: Colors.black.withValues(alpha: 0.5),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
+            
+            // 건강 상태 표시
+            if (plant.isHealthy)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle,
+                    color: AppColors.success,
+                    size: 20,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

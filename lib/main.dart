@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'firebase_options.dart';
 import 'controllers/main_controller.dart';
 import 'controllers/auth_controller.dart';
@@ -11,6 +11,7 @@ import 'screens/diagnosis_screen.dart';
 import 'screens/community_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,48 +39,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: 'Gromy',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        // 주요 색상: 진한 녹색 계열
-        primarySwatch: Colors.green,
-        primaryColor: const Color(0xFF2D7A4F), // 진한 녹색
-        
-        // AppBar 테마
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.black),
-          titleTextStyle: GoogleFonts.poppins(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        
-        // 전체 폰트: Poppins
-        textTheme: GoogleFonts.poppinsTextTheme(
-          ThemeData.light().textTheme,
-        ),
-        
-        // 추가 텍스트 스타일
-        primaryTextTheme: GoogleFonts.poppinsTextTheme(),
-        
-        // 버튼 텍스트
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            textStyle: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        
-        // Scaffold 배경색
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      home: const AuthWrapper(),
+    return ScreenUtilInit(
+      designSize: const Size(375, 812), // iPhone X 기준
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return GetMaterialApp(
+          title: 'Gromy',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          home: const AuthWrapper(),
+        );
+      },
     );
   }
 }
@@ -97,9 +68,7 @@ class AuthWrapper extends StatelessWidget {
       if (authController.isLoading.value) {
         return const Scaffold(
           body: Center(
-            child: CircularProgressIndicator(
-              color: Color(0xFF2D7A4F),
-            ),
+            child: CircularProgressIndicator(),
           ),
         );
       }
@@ -136,48 +105,66 @@ class MainScreen extends StatelessWidget {
         bottom: false, // BottomNavigationBar가 SafeArea 처리
         child: screens[mainController.selectedIndex.value],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: mainController.selectedIndex.value,
-        onTap: mainController.changeTab,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF2D7A4F), // 진한 녹색
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(
-              mainController.selectedIndex.value == 0 
-                  ? Icons.home 
-                  : Icons.home_outlined,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              mainController.selectedIndex.value == 1 
-                  ? Icons.camera_alt 
-                  : Icons.camera_alt_outlined,
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: mainController.selectedIndex.value,
+          onTap: mainController.changeTab,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          selectedItemColor: const Color(0xFF2D7A4F),
+          unselectedItemColor: Colors.grey[400],
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(
+                mainController.selectedIndex.value == 0 
+                    ? Icons.home_rounded
+                    : Icons.home_outlined,
+                size: 30,
+              ),
+              label: 'Home',
             ),
-            label: 'Diagnosis',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              mainController.selectedIndex.value == 2 
-                  ? Icons.people 
-                  : Icons.people_outline,
+            BottomNavigationBarItem(
+              icon: Icon(
+                mainController.selectedIndex.value == 1 
+                    ? Icons.search_rounded
+                    : Icons.search_outlined,
+                size: 30,
+              ),
+              label: 'Search',
             ),
-            label: 'Community',
+            BottomNavigationBarItem(
+              icon: Icon(
+                mainController.selectedIndex.value == 2 
+                    ? Icons.add_box_rounded
+                    : Icons.add_box_outlined,
+                size: 30,
+              ),
+              label: 'Add',
             ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              mainController.selectedIndex.value == 3 
-                  ? Icons.person 
-                  : Icons.person_outline,
+            BottomNavigationBarItem(
+              icon: Icon(
+                mainController.selectedIndex.value == 3 
+                    ? Icons.account_circle_rounded
+                    : Icons.account_circle_outlined,
+                size: 30,
+              ),
+              label: 'Profile',
             ),
-            label: 'Profile',
-          ),
-        ],
+          ],
+        ),
       ),
     ));
   }

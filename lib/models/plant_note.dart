@@ -3,12 +3,14 @@ class PlantNote {
   final String plantId;
   final String content;
   final DateTime timestamp;
+  final String? imageUrl;
 
   PlantNote({
     required this.id,
     required this.plantId,
     required this.content,
     required this.timestamp,
+    this.imageUrl,
   });
 
   Map<String, dynamic> toJson() {
@@ -17,6 +19,7 @@ class PlantNote {
       'plantId': plantId,
       'content': content,
       'timestamp': timestamp.toIso8601String(),
+      'imageUrl': imageUrl,
     };
   }
 
@@ -28,6 +31,7 @@ class PlantNote {
       timestamp: json['timestamp'] != null
           ? DateTime.parse(json['timestamp'])
           : DateTime.now(),
+      imageUrl: json['imageUrl'],
     );
   }
 

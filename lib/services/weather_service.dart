@@ -7,8 +7,16 @@ class WeatherService {
   // Sunrise Sunset API - 완전 무료, API 키 불필요!
   static const String _baseUrl = 'https://api.sunrise-sunset.org/json';
   
+  // OpenWeatherMap API
+  static const String _weatherApiKey = '9f844b36cc4d9c7b4834ba457fb427b4';
+  static const String _weatherBaseUrl = 'https://api.openweathermap.org/data/2.5';
+  
   DateTime? _lastFetchTime;
   List<DailySunTime>? _cachedWeeklyData;
+  
+  // 날씨 캐시
+  Map<String, dynamic>? _cachedWeatherData;
+  DateTime? _lastWeatherFetchTime;
 
   // 현재 위치 가져오기
   Future<Position> _getCurrentLocation() async {
@@ -214,6 +222,153 @@ class WeatherService {
         sunrise: DateTime(date.year, date.month, date.day, 6, sunriseMinute),
         sunset: DateTime(date.year, date.month, date.day, 17, sunsetMinute),
       );
+    });
+  }
+
+  // 현재 날씨 정보 가져오기
+  Future<Map<String, dynamic>> getCurrentWeather() async {
+    try {
+      // 캐시 확인 (30분 유효)
+      if (_cachedWeatherData != null && _lastWeatherFetchTime != null) {
+        final difference = DateTime.now().difference(_lastWeatherFetchTime!);
+        if (difference.inMinutes < 30) {
+          print('✅ Using cached weather data');
+          return _cachedWeatherData!;
+        }
+      }
+
+      final position = await _getCurrentLocation();
+      
+      // API 키가 설정되지 않은 경우 더미 데이터 반환
+      if (_weatherApiKey == 'YOUR_API_KEY_HERE') {
+        print('⚠️ Weather API key not set, using dummy data');
+        return _getDummyWeatherData();
+      }
+
+      final url = '$_weatherBaseUrl/weather'
+          '?lat=${position.latitude}'
+          '&lon=${position.longitude}'
+          '&appid=$_weatherApiKey'
+          '&units=metric' // 섭씨 온도
+          '&lang=ko'; // 한국어
+
+      print('📡 Fetching weather data: $url');
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        _cachedWeatherData = {
+          'temp': data['main']['temp'].toDouble(),
+          'feels_like': data['main']['feels_like'].toDouble(),
+          'temp_min': data['main']['temp_min'].toDouble(),
+          'temp_max': data['main']['temp_max'].toDouble(),
+          'humidity': data['main']['humidity'],
+          'description': data['weather'][0]['description'],
+          'icon': data['weather'][0]['icon'],
+          'city': data['name'],
+        };
+        
+        _lastWeatherFetchTime = DateTime.now();
+        print('✅ Weather data fetched: ${_cachedWeatherData!['temp']}°C');
+        
+        return _cachedWeatherData!;
+      } else {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error getting weather: $e');
+      return _getDummyWeatherData();
+    }
+  }
+
+  // 주간 날씨 예보 가져오기
+  Future<List<Map<String, dynamic>>> getWeeklyForecast() async {
+    try {
+      final position = await _getCurrentLocation();
+      
+      // API 키가 설정되지 않은 경우 더미 데이터 반환
+      if (_weatherApiKey == 'YOUR_API_KEY_HERE') {
+        print('⚠️ Weather API key not set, using dummy forecast');
+        return _getDummyWeeklyForecast();
+      }
+
+      final url = '$_weatherBaseUrl/forecast'
+          '?lat=${position.latitude}'
+          '&lon=${position.longitude}'
+          '&appid=$_weatherApiKey'
+          '&units=metric'
+          '&lang=ko'
+          '&cnt=40'; // 5일 예보 (3시간마다)
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<Map<String, dynamic>> dailyForecasts = [];
+        
+        // 일별로 그룹화 (낮 12시 기준)
+        Map<String, Map<String, dynamic>> dailyData = {};
+        
+        for (var item in data['list']) {
+          final date = DateTime.parse(item['dt_txt']);
+          final dateKey = '${date.year}-${date.month}-${date.day}';
+          
+          // 낮 12시 데이터 우선 사용
+          if (date.hour == 12 || !dailyData.containsKey(dateKey)) {
+            dailyData[dateKey] = {
+              'date': date,
+              'temp': item['main']['temp'].toDouble(),
+              'temp_min': item['main']['temp_min'].toDouble(),
+              'temp_max': item['main']['temp_max'].toDouble(),
+              'description': item['weather'][0]['description'],
+              'icon': item['weather'][0]['icon'],
+            };
+          }
+        }
+        
+        // 리스트로 변환
+        dailyData.forEach((key, value) {
+          dailyForecasts.add(value);
+        });
+        
+        return dailyForecasts.take(7).toList(); // 7일치만
+      } else {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error getting forecast: $e');
+      return _getDummyWeeklyForecast();
+    }
+  }
+
+  // 더미 현재 날씨 데이터
+  Map<String, dynamic> _getDummyWeatherData() {
+    return {
+      'temp': 22.5,
+      'feels_like': 23.0,
+      'temp_min': 18.0,
+      'temp_max': 26.0,
+      'humidity': 65,
+      'description': '맑음',
+      'icon': '01d',
+      'city': '서울',
+    };
+  }
+
+  // 더미 주간 예보 데이터
+  List<Map<String, dynamic>> _getDummyWeeklyForecast() {
+    final now = DateTime.now();
+    return List.generate(7, (index) {
+      final date = now.add(Duration(days: index));
+      return {
+        'date': date,
+        'temp': 20.0 + index,
+        'temp_min': 15.0 + index,
+        'temp_max': 25.0 + index,
+        'description': index % 2 == 0 ? '맑음' : '구름 조금',
+        'icon': index % 2 == 0 ? '01d' : '02d',
+      };
     });
   }
 }
